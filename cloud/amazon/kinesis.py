@@ -37,19 +37,18 @@ extends_documentation_fragment: aws
 try:
     import boto3
     import botocore
-    HAS_BOTO = True
+    HAS_BOTO3 = True
 except ImportError:
-    HAS_BOTO = False
+    HAS_BOTO3 = False
 
 
 class KinesisManager:
     """Handles EC2 instance ELB registration and de-registration"""
 
-    def __init__(self, module, name=None, shard_count=None, **aws_connect_params):
+    def __init__(self, module, name, shard_count):
         self.module = module
         self.name = name
         self.shard_count = shard_count
-        self.aws_connect_params = aws_connect_params
         self.changed = False
         self.kinesis = self._get_connection()
 
@@ -69,7 +68,9 @@ class KinesisManager:
         try:
             self.kinesis.describe_stream(StreamName=self.name)
             return True
-        except(botocore.exceptions.ClientError, botocore.exceptions.BotoCoreError, StandardError), e:
+        except botocore.exceptions.ClientError:
+            return False
+        except(botocore.exceptions.BotoCoreError, StandardError), e:
             self.module.fail_json(msg=str(e))
 
     def _get_connection(self):
@@ -81,29 +82,26 @@ class KinesisManager:
 
 
 def main():
-    argument_spec = aws_common_argument_spec()
+    argument_spec = ec2_argument_spec()
     argument_spec.update(dict(
-        name={'required': True},
-        shard_count={'required': True, 'type': 'int'}
+        name=dict(required=True),
+        shard_count=dict(required=True, type='int')
     ))
 
     module = AnsibleModule(
-        argument_spec=argument_spec,
+        argument_spec=argument_spec
     )
-
-    if not HAS_BOTO:
-        module.fail_json(msg='boto required for this module')
-
-    region, ec2_url, aws_connect_params = get_aws_connection_info(module, boto3=True)
 
     name = module.params['name']
     shard_count = module.params['shard_count']
 
-    kinesis_man = KinesisManager(module, name, shard_count,
-                         **aws_connect_params)
+    if not HAS_BOTO3:
+        module.fail_json(msg='boto3 required for this module')
+
+    kinesis_man = KinesisManager(module, name, shard_count)
 
     kinesis_man.create()
-    ansible_facts = {'name': name}
+    ansible_facts = dict(name=name)
     facts_result = dict(changed=kinesis_man.changed, ansible_facts=ansible_facts)
 
     module.exit_json(**facts_result)
