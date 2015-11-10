@@ -22,6 +22,7 @@ description:
   - Creates an AWS Kinesis stream
 version_added: "2.0.0"
 author: "Sarah Haskins (@sarahhaskins)"
+requirements: [ botocore, boto3 ]
 options:
   name:
     description:
