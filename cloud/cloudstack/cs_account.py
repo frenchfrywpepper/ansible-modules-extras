@@ -354,9 +354,9 @@ def main():
         first_name = dict(default=None),
         last_name = dict(default=None),
         username = dict(default=None),
-        password = dict(default=None),
+        password = dict(default=None, no_log=True),
         timezone = dict(default=None),
-        poll_async = dict(choices=BOOLEANS, default=True),
+        poll_async = dict(type='bool', default=True),
     ))
 
     module = AnsibleModule(
@@ -390,7 +390,7 @@ def main():
 
         result = acs_acc.get_result(account)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)

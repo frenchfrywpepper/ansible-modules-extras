@@ -266,7 +266,7 @@ def main():
             module.fail_json(msg='no command passed for command action')
     ##################################################################
     if not cmdfile:
-        module.fail_json('unable to locate nagios.cfg')
+        module.fail_json(msg='unable to locate nagios.cfg')
 
     ##################################################################
     ansible_nagios = Nagios(module, **module.params)
@@ -873,7 +873,7 @@ class Nagios(object):
         pre = '[%s]' % int(time.time())
 
         post = '\n'
-        cmdstr = '%s %s %s' % (pre, cmd, post)
+        cmdstr = '%s %s%s' % (pre, cmd, post)
         self._write_command(cmdstr)
 
     def act(self):

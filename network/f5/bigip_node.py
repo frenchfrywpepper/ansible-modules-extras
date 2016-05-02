@@ -57,7 +57,8 @@ options:
     validate_certs:
         description:
             - If C(no), SSL certificates will not be validated. This should only be used
-              on personally controlled sites using self-signed certificates.
+              on personally controlled sites.  Prior to 2.0, this module would always
+              validate on python >= 2.7.9 and never validate on python <= 2.7.8
         required: false
         default: 'yes'
         choices: ['yes', 'no']
@@ -290,7 +291,7 @@ def main():
         module.fail_json(msg="host parameter invalid when state=absent")
 
     try:
-        api = bigip_api(server, user, password)
+        api = bigip_api(server, user, password, validate_certs)
         result = {'changed': False}  # default
 
         if state == 'absent':
@@ -378,5 +379,6 @@ def main():
 # import module snippets
 from ansible.module_utils.basic import *
 from ansible.module_utils.f5 import *
-main()
 
+if __name__ == '__main__':
+    main()

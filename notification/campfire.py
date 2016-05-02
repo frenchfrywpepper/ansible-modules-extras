@@ -23,7 +23,6 @@ short_description: Send a message to Campfire
 description:
    - Send a message to Campfire.
    - Messages with newlines will result in a "Paste" message being sent.
-version_added: "1.2"
 options:
   subscription:
     description:
@@ -74,7 +73,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             subscription=dict(required=True),
-            token=dict(required=True),
+            token=dict(required=True, no_log=True),
             room=dict(required=True),
             msg=dict(required=True),
             notify=dict(required=False,
