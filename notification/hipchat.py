@@ -147,7 +147,7 @@ def send_msg_v2(module, token, room, msg_from, msg, msg_format='text',
 
     POST_URL = api + NOTIFY_URI_V2
 
-    url = POST_URL.replace('{id_or_name}', room)
+    url = POST_URL.replace('{id_or_name}', urllib.pathname2url(room))
     data = json.dumps(body)
 
     if module.check_mode:
@@ -169,7 +169,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec=dict(
-            token=dict(required=True),
+            token=dict(required=True, no_log=True),
             room=dict(required=True),
             msg=dict(required=True),
             msg_from=dict(default="Ansible", aliases=['from']),
@@ -184,7 +184,7 @@ def main():
     )
 
     token = module.params["token"]
-    room = module.params["room"]
+    room = str(module.params["room"])
     msg = module.params["msg"]
     msg_from = module.params["msg_from"]
     color = module.params["color"]

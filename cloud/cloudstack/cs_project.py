@@ -259,23 +259,19 @@ class AnsibleCloudStackProject(AnsibleCloudStack):
 
 
 def main():
+    argument_spec = cs_argument_spec()
+    argument_spec.update(dict(
+        name = dict(required=True),
+        display_text = dict(default=None),
+        state = dict(choices=['present', 'absent', 'active', 'suspended' ], default='present'),
+        domain = dict(default=None),
+        account = dict(default=None),
+        poll_async = dict(type='bool', default=True),
+    ))
+
     module = AnsibleModule(
-        argument_spec = dict(
-            name = dict(required=True),
-            display_text = dict(default=None),
-            state = dict(choices=['present', 'absent', 'active', 'suspended' ], default='present'),
-            domain = dict(default=None),
-            account = dict(default=None),
-            poll_async = dict(type='bool', choices=BOOLEANS, default=True),
-            api_key = dict(default=None),
-            api_secret = dict(default=None, no_log=True),
-            api_url = dict(default=None),
-            api_http_method = dict(choices=['get', 'post'], default='get'),
-            api_timeout = dict(type='int', default=10),
-        ),
-        required_together = (
-            ['api_key', 'api_secret', 'api_url'],
-        ),
+        argument_spec=argument_spec,
+        required_together=cs_required_together(),
         supports_check_mode=True
     )
 
@@ -297,7 +293,7 @@ def main():
 
         result = acs_project.get_result(project)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)

@@ -23,7 +23,7 @@ module: seport
 short_description: Manages SELinux network port type definitions
 description:
      - Manages SELinux network port type definitions.
-version_added: "1.7.1"
+version_added: "2.0"
 options:
   ports:
     description:
@@ -234,7 +234,7 @@ def main():
     if not selinux.is_selinux_enabled():
         module.fail_json(msg="SELinux is disabled on this host.")
 
-    ports = [x.strip() for x in module.params['ports'].split(',')]
+    ports = [x.strip() for x in str(module.params['ports']).split(',')]
     proto = module.params['proto']
     setype = module.params['setype']
     state = module.params['state']

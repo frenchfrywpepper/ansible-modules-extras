@@ -37,7 +37,7 @@ options:
       - Network domain for networks in the domain.
     required: false
     default: null
-  cleanup:
+  clean_up:
     description:
       - Clean up all domain resources like child domains and accounts.
       - Considered on C(state=absent).
@@ -225,7 +225,7 @@ class AnsibleCloudStackDomain(AnsibleCloudStack):
             if not self.module.check_mode:
                 args            = {}
                 args['id']      = domain['id']
-                args['cleanup'] = self.module.params.get('cleanup')
+                args['cleanup'] = self.module.params.get('clean_up')
                 res = self.cs.deleteDomain(**args)
 
                 if 'errortext' in res:
@@ -239,22 +239,18 @@ class AnsibleCloudStackDomain(AnsibleCloudStack):
 
 
 def main():
+    argument_spec = cs_argument_spec()
+    argument_spec.update(dict(
+        path = dict(required=True),
+        state = dict(choices=['present', 'absent'], default='present'),
+        network_domain = dict(default=None),
+        clean_up = dict(type='bool', default=False),
+        poll_async = dict(type='bool', default=True),
+    ))
+
     module = AnsibleModule(
-        argument_spec = dict(
-            path = dict(required=True),
-            state = dict(choices=['present', 'absent'], default='present'),
-            network_domain = dict(default=None),
-            cleanup = dict(choices=BOOLEANS, default=False),
-            poll_async = dict(choices=BOOLEANS, default=True),
-            api_key = dict(default=None),
-            api_secret = dict(default=None, no_log=True),
-            api_url = dict(default=None),
-            api_http_method = dict(choices=['get', 'post'], default='get'),
-            api_timeout = dict(type='int', default=10),
-        ),
-        required_together = (
-            ['api_key', 'api_secret', 'api_url'],
-        ),
+        argument_spec=argument_spec,
+        required_together=cs_required_together(),
         supports_check_mode=True
     )
 
@@ -272,7 +268,7 @@ def main():
 
         result = acs_dom.get_result(domain)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)

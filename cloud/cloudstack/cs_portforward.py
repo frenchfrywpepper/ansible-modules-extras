@@ -135,7 +135,6 @@ EXAMPLES = '''
     public_port: 53
     private_port: 53
     protocol: udp
-    open_firewall: true
 
 # remove ssh port forwarding
 - local_action:
@@ -231,7 +230,7 @@ class AnsibleCloudStackPortforwarding(AnsibleCloudStack):
             'publicport':       'public_port',
             'publicendport':    'public_end_port',
             'privateport':      'private_port',
-            'private_end_port': 'private_end_port',
+            'privateendport':   'private_end_port',
         }
         self.portforwarding_rule = None
         self.vm_default_nic = None
@@ -323,7 +322,6 @@ class AnsibleCloudStackPortforwarding(AnsibleCloudStack):
         args['publicendport']       = self.get_or_fallback('public_end_port', 'public_port')
         args['privateport']         = self.module.params.get('private_port')
         args['privateendport']      = self.get_or_fallback('private_end_port', 'private_port')
-        args['openfirewall']        = self.module.params.get('open_firewall')
         args['vmguestip']           = self.get_vm_guest_ip()
         args['ipaddressid']         = self.get_ip_address(key='id')
         args['virtualmachineid']    = self.get_vm(key='id')
@@ -361,39 +359,35 @@ class AnsibleCloudStackPortforwarding(AnsibleCloudStack):
         super(AnsibleCloudStackPortforwarding, self).get_result(portforwarding_rule)
         if portforwarding_rule:
             # Bad bad API does not always return int when it should.
-            for search_key, return_key in returns_to_int.iteritems():
-                if search_key in resource:
-                    self.result[return_key] = int(resource[search_key])
+            for search_key, return_key in self.returns_to_int.iteritems():
+                if search_key in portforwarding_rule:
+                    self.result[return_key] = int(portforwarding_rule[search_key])
         return self.result
 
 
 def main():
+    argument_spec = cs_argument_spec()
+    argument_spec.update(dict(
+        ip_address = dict(required=True),
+        protocol= dict(choices=['tcp', 'udp'], default='tcp'),
+        public_port = dict(type='int', required=True),
+        public_end_port = dict(type='int', default=None),
+        private_port = dict(type='int', required=True),
+        private_end_port = dict(type='int', default=None),
+        state = dict(choices=['present', 'absent'], default='present'),
+        open_firewall = dict(type='bool', default=False),
+        vm_guest_ip = dict(default=None),
+        vm = dict(default=None),
+        zone = dict(default=None),
+        domain = dict(default=None),
+        account = dict(default=None),
+        project = dict(default=None),
+        poll_async = dict(type='bool', default=True),
+    ))
+
     module = AnsibleModule(
-        argument_spec = dict(
-            ip_address = dict(required=True),
-            protocol= dict(choices=['tcp', 'udp'], default='tcp'),
-            public_port = dict(type='int', required=True),
-            public_end_port = dict(type='int', default=None),
-            private_port = dict(type='int', required=True),
-            private_end_port = dict(type='int', default=None),
-            state = dict(choices=['present', 'absent'], default='present'),
-            open_firewall = dict(choices=BOOLEANS, default=False),
-            vm_guest_ip = dict(default=None),
-            vm = dict(default=None),
-            zone = dict(default=None),
-            domain = dict(default=None),
-            account = dict(default=None),
-            project = dict(default=None),
-            poll_async = dict(choices=BOOLEANS, default=True),
-            api_key = dict(default=None),
-            api_secret = dict(default=None, no_log=True),
-            api_url = dict(default=None),
-            api_http_method = dict(choices=['get', 'post'], default='get'),
-            api_timeout = dict(type='int', default=10),
-        ),
-        required_together = (
-            ['api_key', 'api_secret', 'api_url'],
-        ),
+        argument_spec=argument_spec,
+        required_together=cs_required_together(),
         supports_check_mode=True
     )
 
@@ -410,7 +404,7 @@ def main():
 
         result = acs_pf.get_result(pf_rule)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)

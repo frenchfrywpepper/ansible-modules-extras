@@ -309,14 +309,16 @@ class AnsibleCloudStackSecurityGroupRule(AnsibleCloudStack):
         res  = None
         sg_type = self.module.params.get('type')
         if sg_type == 'ingress':
-            rule = self._get_rule(security_group['ingressrule'])
+            if 'ingressrule' in security_group:
+                rule = self._get_rule(security_group['ingressrule'])
             if not rule:
                 self.result['changed'] = True
                 if not self.module.check_mode:
                     res = self.cs.authorizeSecurityGroupIngress(**args)
 
         elif sg_type == 'egress':
-            rule = self._get_rule(security_group['egressrule'])
+            if 'egressrule' in security_group:
+                rule = self._get_rule(security_group['egressrule'])
             if not rule:
                 self.result['changed'] = True
                 if not self.module.check_mode:
@@ -371,30 +373,29 @@ class AnsibleCloudStackSecurityGroupRule(AnsibleCloudStack):
 
 
 def main():
+    argument_spec = cs_argument_spec()
+    argument_spec.update(dict(
+        security_group = dict(required=True),
+        type = dict(choices=['ingress', 'egress'], default='ingress'),
+        cidr = dict(default='0.0.0.0/0'),
+        user_security_group = dict(default=None),
+        protocol = dict(choices=['tcp', 'udp', 'icmp', 'ah', 'esp', 'gre'], default='tcp'),
+        icmp_type = dict(type='int', default=None),
+        icmp_code = dict(type='int', default=None),
+        start_port = dict(type='int', default=None, aliases=['port']),
+        end_port = dict(type='int', default=None),
+        state = dict(choices=['present', 'absent'], default='present'),
+        project = dict(default=None),
+        poll_async = dict(type='bool', default=True),
+    ))
+    required_together = cs_required_together()
+    required_together.extend([
+        ['icmp_type', 'icmp_code'],
+    ])
+
     module = AnsibleModule(
-        argument_spec = dict(
-            security_group = dict(required=True),
-            type = dict(choices=['ingress', 'egress'], default='ingress'),
-            cidr = dict(default='0.0.0.0/0'),
-            user_security_group = dict(default=None),
-            protocol = dict(choices=['tcp', 'udp', 'icmp', 'ah', 'esp', 'gre'], default='tcp'),
-            icmp_type = dict(type='int', default=None),
-            icmp_code = dict(type='int', default=None),
-            start_port = dict(type='int', default=None, aliases=['port']),
-            end_port = dict(type='int', default=None),
-            state = dict(choices=['present', 'absent'], default='present'),
-            project = dict(default=None),
-            poll_async = dict(choices=BOOLEANS, default=True),
-            api_key = dict(default=None),
-            api_secret = dict(default=None, no_log=True),
-            api_url = dict(default=None),
-            api_http_method = dict(choices=['get', 'post'], default='get'),
-            api_timeout = dict(type='int', default=10),
-        ),
-        required_together = (
-            ['icmp_type', 'icmp_code'],
-            ['api_key', 'api_secret', 'api_url'],
-        ),
+        argument_spec=argument_spec,
+        required_together=required_together,
         mutually_exclusive = (
             ['icmp_type', 'start_port'],
             ['icmp_type', 'end_port'],
@@ -418,7 +419,7 @@ def main():
 
         result = acs_sg_rule.get_result(sg_rule)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)
