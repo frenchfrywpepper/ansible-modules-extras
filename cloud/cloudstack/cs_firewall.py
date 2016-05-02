@@ -99,6 +99,12 @@ options:
       - Name of the project the firewall rule is related to.
     required: false
     default: null
+  zone:
+    description:
+      - Name of the zone in which the virtual machine is in.
+      - If not set, default zone is used.
+    required: false
+    default: null
   poll_async:
     description:
       - Poll async jobs until job has finished.
@@ -228,6 +234,7 @@ class AnsibleCloudStackFirewall(AnsibleCloudStack):
             'icmptype':     'icmp_type',
         }
         self.firewall_rule = None
+        self.network = None
 
 
     def get_firewall_rule(self):
@@ -303,10 +310,11 @@ class AnsibleCloudStackFirewall(AnsibleCloudStack):
         return cidr == rule['cidrlist']
 
 
-    def get_network(self, key=None, network=None):
-        if not network:
-            network = self.module.params.get('network')
+    def get_network(self, key=None):
+        if self.network:
+            return self._get_by_key(key, self.network)
 
+        network = self.module.params.get('network')
         if not network:
             return None
 
@@ -322,6 +330,7 @@ class AnsibleCloudStackFirewall(AnsibleCloudStack):
 
         for n in networks['network']:
             if network in [ n['displaytext'], n['name'], n['id'] ]:
+                self.network = n
                 return self._get_by_key(key, n)
                 break
         self.module.fail_json(msg="Network '%s' not found" % network)
@@ -386,8 +395,8 @@ class AnsibleCloudStackFirewall(AnsibleCloudStack):
         super(AnsibleCloudStackFirewall, self).get_result(firewall_rule)
         if firewall_rule:
             self.result['type'] = self.module.params.get('type')
-            if 'networkid' in firewall_rule:
-                self.result['network'] = self.get_network(key='displaytext', network=firewall_rule['networkid'])
+            if self.result['type'] == 'egress':
+                self.result['network'] = self.get_network(key='displaytext')
         return self.result
 
 
@@ -404,10 +413,11 @@ def main():
         start_port = dict(type='int', aliases=['port'], default=None),
         end_port = dict(type='int', default=None),
         state = dict(choices=['present', 'absent'], default='present'),
+        zone = dict(default=None),
         domain = dict(default=None),
         account = dict(default=None),
         project = dict(default=None),
-        poll_async = dict(choices=BOOLEANS, default=True),
+        poll_async = dict(type='bool', default=True),
     ))
 
     required_together = cs_required_together()
@@ -443,7 +453,7 @@ def main():
 
         result = acs_fw.get_result(fw_rule)
 
-    except CloudStackException, e:
+    except CloudStackException as e:
         module.fail_json(msg='CloudStackException: %s' % str(e))
 
     module.exit_json(**result)

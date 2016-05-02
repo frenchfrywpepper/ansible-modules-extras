@@ -101,7 +101,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             user=dict(required=True),
-            password=dict(required=True),
+            password=dict(required=True, no_log=True),
             to=dict(required=True),
             msg=dict(required=True),
             host=dict(required=False),
@@ -134,7 +134,7 @@ def main():
     msg = xmpp.protocol.Message(body=module.params['msg'])
 
     try:
-        conn=xmpp.Client(server)
+        conn=xmpp.Client(server, debug=[])
         if not conn.connect(server=(host,port)):
             module.fail_json(rc=1, msg='Failed to connect to server: %s' % (server))
         if not conn.auth(user,password,'Ansible'):
